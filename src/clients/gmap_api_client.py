@@ -18,11 +18,11 @@ async def get_route_data(source: str, destination: str, waypoints: list[str] = N
         response = await client.post(url, json=params)
         return response.json()
 
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(get_route_data("34 Finney Terrace, Milton, ON, Canada", 
-    "34 Finney Terrace, Milton, ON, Canada", 
-    ["6301 Silver Dart Dr, Mississauga, ON L5P 1B2",
-        "Toronto Pearson International Airport",
-        "55 Mill St, Toronto, ON M5A 3C4",
-        "320 Queen St E, Brampton, ON L6V 1C2"]))
+# if __name__ == "__main__":
+#     import asyncio
+#     asyncio.run(get_route_data("34 Finney Terrace, Milton, ON, Canada", 
+#     "34 Finney Terrace, Milton, ON, Canada", 
+#     ["6301 Silver Dart Dr, Mississauga, ON L5P 1B2",
+#         "Toronto Pearson International Airport",
+#         "55 Mill St, Toronto, ON M5A 3C4",
+#         "320 Queen St E, Brampton, ON L6V 1C2"]))
