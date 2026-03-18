@@ -1,10 +1,13 @@
 import os
 import httpx
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+EST = timezone(timedelta(hours=-5))
 
 async def get_route_data(source: str, destination: str, waypoints: list[str] = None):
     url = "https://route-optimize-api-670264226001.us-central1.run.app/optimize-route"
-    dt = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    dt = datetime.now(EST).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
+    print(dt)
     params = {
         "source": source,
         "destination": destination,
