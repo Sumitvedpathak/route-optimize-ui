@@ -1,5 +1,6 @@
 # src/tools/gmail_tool.py
-import os.path
+import os
+import os.path 
 import base64
 import re
 from html import unescape
@@ -17,6 +18,29 @@ token_file = PROJECT_ROOT / "token.json"
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
+def _materialize_secret_json(env_name: str, fallback_path: Path, tmp_filename: str) -> Path:
+    """
+    Prefer JSON content from env var (Cloud Run secret-as-env), else local file path.
+    When env var exists, write it to /tmp so downstream APIs can read a file path.
+    """
+    secret_value = os.getenv(env_name, "").strip()
+    if secret_value:
+        tmp_path = Path("/tmp") / tmp_filename
+        tmp_path.write_text(secret_value, encoding="utf-8")
+        return tmp_path
+    return fallback_path
+
+
+credentials_file = _materialize_secret_json(
+    "GMAIL_CREDS_JSON",
+    PROJECT_ROOT / "g_creds.json",
+    "g_creds.json",
+)
+token_file = _materialize_secret_json(
+    "GMAIL_TOKEN_JSON",
+    PROJECT_ROOT / "token.json",
+    "token.json",
+)
 
 def _decode_body_data(data: str) -> str:
     if not data:
