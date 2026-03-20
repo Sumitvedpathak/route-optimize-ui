@@ -12,32 +12,37 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-credentials_file = PROJECT_ROOT / "g_creds.json"
-token_file = PROJECT_ROOT / "token.json"
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
-def _materialize_secret_json(env_name: str, fallback_path: Path, tmp_filename: str) -> Path:
+
+def _materialize_secret_json(
+    env_names: tuple[str, ...],
+    fallback_path: Path,
+    tmp_filename: str,
+) -> Path:
     """
-    Prefer JSON content from env var (Cloud Run secret-as-env), else local file path.
-    When env var exists, write it to /tmp so downstream APIs can read a file path.
+    Prefer JSON from first set Cloud Run secret env var, else local file path.
+    Secret-as-env: map Secret Manager to e.g. GMAIL_TOKEN_JSON, GMAIL_CREDENTIALS_JSON.
     """
-    secret_value = os.getenv(env_name, "").strip()
-    if secret_value:
-        tmp_path = Path("/tmp") / tmp_filename
-        tmp_path.write_text(secret_value, encoding="utf-8")
-        return tmp_path
+    for env_name in env_names:
+        secret_value = os.getenv(env_name, "").strip()
+        if secret_value:
+            tmp_path = Path("/tmp") / tmp_filename
+            tmp_path.write_text(secret_value, encoding="utf-8")
+            return tmp_path
     return fallback_path
 
 
+# Match common Secret Manager names (GMAIL_CREDENTIALS_JSON vs GMAIL_CREDS_JSON)
 credentials_file = _materialize_secret_json(
-    "GMAIL_CREDS_JSON",
+    ("GMAIL_CREDS_JSON", "GMAIL_CREDENTIALS_JSON"),
     PROJECT_ROOT / "g_creds.json",
     "g_creds.json",
 )
 token_file = _materialize_secret_json(
-    "GMAIL_TOKEN_JSON",
+    ("GMAIL_TOKEN_JSON",),
     PROJECT_ROOT / "token.json",
     "token.json",
 )
@@ -100,6 +105,14 @@ def get_gmail_credentials():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
+            # Cloud Run / servers: no browser for OAuth. Need token + client JSON via secrets.
+            if not Path(credentials_file).exists():
+                raise FileNotFoundError(
+                    "Gmail client secrets not found. For Cloud Run, map secrets to env vars: "
+                    "GMAIL_TOKEN_JSON (authorized user token JSON) and "
+                    "GMAIL_CREDENTIALS_JSON or GMAIL_CREDS_JSON (OAuth client JSON). "
+                    "Local dev: place g_creds.json and token.json in the project root."
+                )
             flow = InstalledAppFlow.from_client_secrets_file(
                 str(credentials_file), SCOPES)
             creds = flow.run_local_server(port=0)

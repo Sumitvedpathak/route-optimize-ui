@@ -1,5 +1,5 @@
-# Use Python 3.11 or 3.12
-FROM python:3.11-slim
+# Python 3.13+ required by audioop-lts (Chainlit / deps)
+FROM python:3.13-slim
 
 # Set working directory
 WORKDIR /app
@@ -11,8 +11,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your source code
 COPY . .
 
-# Chainlit runs on port 8080 by default in Cloud Run
+# Cloud Run startup: bind PORT env + PYTHONPATH so `agents` / `constants` resolve
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENV PYTHONUNBUFFERED=1
+
 EXPOSE 8080
 
-# Command to run Chainlit in production mode
-CMD ["chainlit", "run", "src/app.py", "--host", "0.0.0.0", "--port", "8080"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
